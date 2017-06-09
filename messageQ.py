@@ -1,5 +1,6 @@
 import redis
 import time
+import re
 class MessageQueue(object):
     def __init__(self, id, client):
         self.id = id
@@ -21,5 +22,8 @@ class MessageQueue(object):
 
     def getMessage(self):
         key1 = self.client.brpop(self.key, 0)[1];
-        #print key1[1]
-        return self.client.get(key1)
+        print key1
+        m = map(int, re.findall(r'\d+', key1))
+        #message = '{"from": {}, "time": {}, "message": {}}'.format(m[1], m[2], self.client.get(key1)[1])
+        message = {'from': m[1], 'time': m[2], 'message': self.client.get(key1)}
+        return message
