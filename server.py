@@ -25,8 +25,9 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def open(self, *args):
         self.id = self.get_argument("Id")
         self.stream.set_nodelay(True)
-        self.q = MessageQueue(self.id, client)
-        self.listenForMessage()
+        self.q = MessageQueue(self.id, client, self)
+        #self.q.start()
+        #self.q.listenForMessage()
         clients[self.id] = {"id": self.id, "object": self}
         client.sadd('users', self.id);
         print client.scard('users');
@@ -36,23 +37,24 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         when we receive some message we want some message handler..
         for this example i will just print message to console
         """
-        print "Client %s received a message : %s" % (self.id, message)
         m = json.loads(message)
         self.q.sendMessage(m['id'], m['message'])
-        self.write_message(u"PONG: " + self.id)
+
+    def send_message(self, message):
+        self.write_message(message)
 
     def on_close(self):
         if self.id in clients:
             del clients[self.id]
+        self.q.stop()
+
+
     def check_origin(self, origin):
         print origin
         return True
-    def listenForMessage(self):
-        msg = self.q.getMessage()
-        if(msg):
-            print msg
-            self.write_message(msg)
-        self.listenForMessage()
+
+    def getOnlineUsers(self):
+        return clients
 
 app = tornado.web.Application([
     (r'/', IndexHandler),
