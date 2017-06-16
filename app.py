@@ -78,7 +78,7 @@ class MessageHandler(tornado.websocket.WebSocketHandler):
         self.id = self.get_argument('id')
         self.username = self.get_argument('username')
 
-        self.key = 'user:{}:messageQueue'.format(id)
+        self.key = 'user:{}:messageQueue'.format(self.id)
         #print(self.key)
         self.client = tornadoredis.Client()
         self.client.connect()
@@ -102,9 +102,20 @@ class MessageHandler(tornado.websocket.WebSocketHandler):
         if msg.kind == 'message':
             if msg.pattern == self.key:
                 m = map(int, re.findall(r'\d+', msg.body))
-                message = {'from': m[1], 'time': m[2], 'message': client.get(msg.body)}
+                message = '{{"code": "message", "from": {}, "time": {}, "message": "{}"}}'.format(m[1], m[2], client.get(msg.body))
                 print(message)
-                self.write_message(str(message))
+                self.write_message(message)
+            elif msg.channel == 'userlog':
+                m = msg.body.encode('ascii', 'ignore').split(':')
+                print(m[2])
+                if int(m[2]) == 1:
+                    message = '{{"code": "signIn", "userId": {}, "username": "{}"}}'.format(m[0], m[1])
+                    print(message)
+                    self.write_message(message)
+                else:
+                    message = '{{"code": "signOut", "userId": {}, "username": "{}"}}'.format(m[0], m[1])
+                    print(message)
+                    self.write_message(message)
         if msg.kind == 'disconnect':
             # Do not try to reconnect, just send a message back
             # to the client and close the client connection
