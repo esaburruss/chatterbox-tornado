@@ -91,7 +91,7 @@ class MessageHandler(tornado.websocket.WebSocketHandler):
         #self.client.listen()
 
         #self.client.listen(self.user_log)
-
+        self.write_message(self.getOnlineUsers())
 
         client.sadd('users', self.usr)
         clients[self.id] = {"id": self.id, "object": self}
@@ -130,10 +130,21 @@ class MessageHandler(tornado.websocket.WebSocketHandler):
         if self.id in clients:
             del clients[self.id]
         client.publish('userlog', '{}:0'.format(self.usr))
-        client.srem(self.usr)
+        client.srem('users', self.usr)
 
-
-
+    def getOnlineUsers(self):
+        users = client.smembers('users')
+        json = '{"code": "online-users", "users":['
+        i=0
+        for x in users:
+            m = x.encode('ascii', 'ignore').split(':')
+            if int(m[0]) != self.id:
+                if i!=0:
+                    json += ','
+                json += '{{"id": {}, "username": "{}"}}'.format(m[0], m[1])
+                i+=1
+        json += ']}'
+        return json
 
 application = tornado.web.Application([
     #(r'/', MainHandler),
